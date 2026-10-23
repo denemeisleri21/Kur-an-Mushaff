@@ -1,0 +1,53 @@
+name: Android APK Derle
+
+on:
+  push:
+    branches: [ "**" ]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Projeyi Indir
+        uses: actions/checkout@v4
+
+      - name: Zip Dosyasini Bul ve Cikar
+        run: |
+          ZIP_FILE=$(find . -name "*.zip" | head -n 1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Zip bulundu ve aciliyor: $ZIP_FILE"
+            unzip -o "$ZIP_FILE"
+          fi
+          GRADLE_FILE=$(find . -name "settings.gradle.kts" | head -n 1)
+          if [ -n "$GRADLE_FILE" ]; then
+            DIR=$(dirname "$GRADLE_FILE")
+            if [ "$DIR" != "." ]; then cp -rf "$DIR"/. . ; fi
+          else
+            echo "HATA: Zip dosyasi depoya yuklenmemis!"
+            exit 1
+          fi
+
+      - name: JDK 17 Kur
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Gradle Kurulumu
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.6'
+          cache-disabled: true
+
+      - name: Debug APK Derle
+        run: gradle assembleDebug --stacktrace
+
+      - name: APK Yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kuran-Mushaf-Okuma-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
